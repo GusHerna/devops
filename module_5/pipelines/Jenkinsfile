@@ -4,7 +4,7 @@ pipeline {
     environment {
         REGISTRY_PASSWORD_1 = credentials('REGISTRY_PASSWORD_1')
         group='rg-devops-sura-gaherna1-dev'
-        location='southcentralus'
+        location='eastus'
         registry='crdevopssuragaherna1dev'
         registry_url='https://crdevopssuragaherna1dev.azurecr.io'
         skuRegistry='Basic'
