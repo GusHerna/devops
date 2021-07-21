@@ -1,1 +1,88 @@
+pipeline {
+    agent any
 
+    environment {
+        REGISTRY_PASSWORD_1 = credentials('REGISTRY_PASSWORD_1')
+        group='rg-devops-sura-gaherna1-dev'
+        location='eastus'
+        registry='crdevopssuragaherna1dev'
+        registry_url='https://crdevopssuragaherna1dev.azurecr.io'
+        skuRegistry='Basic'
+        plan='plan-devops-sura-gaherna1-dev'
+        app='app-devops-sura-starter-gaherna1-dev'
+        image='crdevopssuragaherna1dev.azurecr.io/starter:latest'
+    }
+
+    stages {
+        stage('Checkout') { 
+            steps {
+                // 
+                echo 'Checking Out'
+                sh 'sudo apt-get update -y'
+                sh 'curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash'
+                nodejs(nodeJSInstallationName: 'Node 12.22.3') {
+                    sh 'rm -rf fe-devops-sura-gaherna1-dev'
+                    sh 'npx gatsby new fe-devops-sura-gaherna1-dev https://github.com/Evaluates2/Gatsby-Starter-TypeScript-Redux-TDD-BDD'
+                }
+            }
+        }
+    node {
+       stage('SCM') {
+    checkout scm
+  }
+      stage('SonarQube Analysis') {
+    def scannerHome = tool 'SonarScanner';
+    withSonarQubeEnv() {
+      sh "${scannerHome}/bin/sonar-scanner"
+    }
+  }
+}
+        stage('Build') { 
+            steps {
+                // 
+                echo 'Building'
+                nodejs(nodeJSInstallationName: 'Node 12.22.3') {
+                sh 'npm run build --prefix fe-devops-sura-gaherna1-dev'
+                }
+            }
+        }
+        stage('Test') { 
+            steps {
+                // 
+                echo 'Testing'
+                nodejs(nodeJSInstallationName: 'Node 12.22.3') {
+                    sh 'npm run test-once --prefix fe-devops-sura-gaherna1-dev'
+                    sh 'npm run lint --prefix fe-devops-sura-gaherna1-dev'
+                }
+            }
+        }
+        stage('Delivery') { 
+            steps {
+                // 
+                echo 'Deliverying'
+                withCredentials([azureServicePrincipal('fcff1c0f-e24e-4bd6-b814-fef5dc682a17')]) {
+                    sh 'az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID'
+                    sh '''
+cat <<-EOF> fe-devops-sura-gaherna1-dev/Dockerfile
+FROM nginx:stable-alpine
+COPY public /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+EOF'''
+                    sh 'docker build -f fe-devops-sura-gaherna1-dev/Dockerfile -t $image fe-devops-sura-gaherna1-dev'
+                    sh 'docker login $registry_url -u crdevopssuragaherna1dev -p $REGISTRY_PASSWORD_1'
+                    sh 'docker push $image'                   
+                }
+            }
+        }
+        stage('Deploy') { 
+            steps {
+                // 
+                echo 'Deploying'            
+                sh 'az configure --defaults group=$group location=$location'
+                sh 'az webapp create --plan $plan --name $app --deployment-container-image-name $image'
+                sh 'az webapp config container set --name $app --docker-custom-image-name $image --docker-registry-server-url $registry_url'    
+            }
+        }
+    }
+}
