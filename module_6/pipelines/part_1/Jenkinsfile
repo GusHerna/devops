@@ -11,6 +11,7 @@ pipeline {
         plan='plan-devops-sura-gaherna1-dev'
         app='app-devops-sura-starter-gaherna1-dev'
         image='crdevopssuragaherna1dev.azurecr.io/starter:latest'
+        ToA = credentials('SonarQubeToA')
     }
 
     stages {
@@ -27,9 +28,18 @@ pipeline {
             }
         }
         stage('SonarQube Analysis') {
-            def scannerHome = tool 'SonarScanner';
-            withSonarQubeEnv() {
-                sh "${scannerHome}/bin/sonar-scanner"
+            steps {
+                nodejs(nodeJSInstallationName: 'Node 12.22.3') {
+                    sh '''  
+                     npx sonar-scanner \
+                    -Dsonar.host.url=http://vm-devops-sura-sonarqube-gaherna1-dev.eastus.cloudapp.azure.com/ \
+                    -Dsonar.login=$ToA \
+                    -Dsonar.sources=./fe-devops-sura-gaherna1-dev \
+                    -Dsonar.exclusions=./fe-devops-sura-gaherna1-dev/node_modules \
+                    -Dsonar.projectName=DevOps \
+                    -Dsonar.projectKey=DevOps                  
+                    '''        
+                }
             }
         }
         stage('Build') { 
