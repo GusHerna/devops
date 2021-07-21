@@ -37,10 +37,10 @@ pipeline {
                 }
             }
         }
-        stage('Deploy') { 
+        stage('Delivery') { 
             steps {
                 // 
-                echo 'Deploying'
+                echo 'Deliverying'
                 withCredentials([azureServicePrincipal('fcff1c0f-e24e-4bd6-b814-fef5dc682a17')]) {
                     sh 'az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID'
                     sh '''
@@ -52,11 +52,17 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF'''
                     sh 'docker build -f fe-devops-sura-gaherna1-dev/Dockerfile -t $image fe-devops-sura-gaherna1-dev'
                     sh 'docker login $registry_url -u crdevopssuragaherna1dev -p $REGISTRY_PASSWORD_1'
-                    sh 'docker push $image'
-                    sh 'az configure --defaults group=$group location=$location'
-                    sh 'az webapp create --plan $plan --name $app --deployment-container-image-name $image'
-                    sh 'az webapp config container set --name $app --docker-custom-image-name $image --docker-registry-server-url $registry_url'    
+                    sh 'docker push $image'                   
                 }
+            }
+        }
+        stage('Deploy') { 
+            steps {
+                // 
+                echo 'Deploying'            
+                sh 'az configure --defaults group=$group location=$location'
+                sh 'az webapp create --plan $plan --name $app --deployment-container-image-name $image'
+                sh 'az webapp config container set --name $app --docker-custom-image-name $image --docker-registry-server-url $registry_url'    
             }
         }
     }
