@@ -1,13 +1,11 @@
 pipeline {
     agent any
 
- 
 
     environment {
         ToA = credentials('SonarQubeToA')
     }
 
- 
 
     stages {
         stage('Checkout code') {
@@ -25,7 +23,7 @@ pipeline {
                 '''
                 nodejs(nodeJSInstallationName: 'Node 12.22.3') {
                     sh 'npm i --prefix module_6/tests'
-                    sh 'cd module_6/tests && npx selenium-side-runner *.side --output-directory=results --output-format=junit -c "goog:chromeOptions.args=[disable-infobars, headless] browserName=chrome"'
+                    sh 'npm run test:mocha --prefix module_6/tests'
                 }
             }
         }
@@ -40,7 +38,7 @@ pipeline {
                     -Dsonar.exclusions=./module_6/tests/node_modules \
                     -Dsonar.projectName=DevOps \
                     -Dsonar.projectKey=DevOps \
-                    -Dsonar.junit.reportPaths=./module_6/tests/results
+                    -Dsonar.javascript.lcov.reportPaths=./module_6/tests/coverage/lcov.info
                     '''
                 }
             }
