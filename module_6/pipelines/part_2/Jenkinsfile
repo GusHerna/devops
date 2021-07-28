@@ -1,13 +1,9 @@
 pipeline {
     agent any
 
- 
-
     environment {
         ToA = credentials('SonarQubeToA')
     }
-
- 
 
     stages {
         stage('Checkout code') {
